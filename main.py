@@ -121,7 +121,7 @@ def save_dynamic_subscription(group_id, bilibili_UID):
 # 添加直播订阅
 async def add_live_subscription(websocket, group_id, message_id, raw_message):
     try:
-        match = re.match(r"^订阅直播(\d+)$", raw_message)
+        match = re.match(r"^订阅直播.*(\d+)$", raw_message)
         if match:
             bilibili_UID = match.group(1)
         else:
@@ -153,7 +153,7 @@ async def add_live_subscription(websocket, group_id, message_id, raw_message):
 # 取消直播订阅
 async def delete_live_subscription(websocket, group_id, message_id, raw_message):
     try:
-        match = re.match(r"^取消订阅直播(\d+)$", raw_message)
+        match = re.match(r"^取消订阅直播.*(\d+)$", raw_message)
         if match:
             bilibili_UID = match.group(1)
         else:
@@ -190,7 +190,7 @@ async def delete_live_subscription(websocket, group_id, message_id, raw_message)
 # 添加动态订阅
 async def add_dynamic_subscription(websocket, group_id, message_id, raw_message):
     try:
-        match = re.match(r"^订阅动态(\d+)$", raw_message)
+        match = re.match(r"^订阅动态.*(\d+)$", raw_message)
         if match:
             bilibili_UID = match.group(1)
         else:
@@ -222,7 +222,7 @@ async def add_dynamic_subscription(websocket, group_id, message_id, raw_message)
 # 取消动态订阅
 async def delete_dynamic_subscription(websocket, group_id, message_id, raw_message):
     try:
-        match = re.match(r"^取消订阅动态(\d+)$", raw_message)
+        match = re.match(r"^取消订阅动态.*(\d+)$", raw_message)
         if match:
             bilibili_UID = match.group(1)
         else:
@@ -585,10 +585,29 @@ async def check_dynamic(websocket):
                                 dynamic_text = latest_dynamic["modules"][
                                     "module_dynamic"
                                 ]["desc"]["text"]
+                                # 提取更多信息
+                                dynamic_type = latest_dynamic["type"]
+                                comment_count = latest_dynamic["modules"][
+                                    "module_stat"
+                                ]["comment"]["count"]
+                                like_count = latest_dynamic["modules"]["module_stat"][
+                                    "like"
+                                ]["count"]
+                                forward_count = latest_dynamic["modules"][
+                                    "module_stat"
+                                ]["forward"]["count"]
+                                # 播报信息
                                 await send_group_msg(
                                     websocket,
                                     group_id,
-                                    f"UID:{UID}有新动态: \n作者: {author_name}\n发布时间: {pub_time}\n动态内容: {dynamic_text}",
+                                    f"UID:{UID}有新动态: \n"
+                                    f"作者: {author_name}\n"
+                                    f"发布时间: {pub_time}\n"
+                                    f"动态内容: {dynamic_text}\n"
+                                    f"动态类型: {dynamic_type}\n"
+                                    f"评论数: {comment_count}\n"
+                                    f"点赞数: {like_count}\n"
+                                    f"转发数: {forward_count}",
                                 )
     except Exception as e:
         logging.error(f"定时检查有无新动态失败: {e}")
