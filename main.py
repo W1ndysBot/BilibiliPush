@@ -130,7 +130,7 @@ async def add_live_subscription(websocket, group_id, message_id, raw_message):
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}]你已订阅uid为{bilibili_uid}的主播",
+                f"[CQ:reply,id={message_id}]本群已订阅uid为{bilibili_uid}的主播",
             )
             return
         # 添加订阅
@@ -162,7 +162,7 @@ async def delete_live_subscription(websocket, group_id, message_id, raw_message)
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}]你未订阅uid为{bilibili_uid}的主播",
+                f"[CQ:reply,id={message_id}]本群未订阅uid为{bilibili_uid}的主播",
             )
             return
         # 删除订阅
@@ -199,7 +199,7 @@ async def add_dynamic_subscription(websocket, group_id, message_id, raw_message)
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}]你已订阅uid为{bilibili_uid}的动态",
+                f"[CQ:reply,id={message_id}]本群已订阅uid为{bilibili_uid}的动态",
             )
             return
         # 添加订阅
@@ -231,7 +231,7 @@ async def delete_dynamic_subscription(websocket, group_id, message_id, raw_messa
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}]你未订阅uid为{bilibili_uid}的动态",
+                f"[CQ:reply,id={message_id}]本群未订阅uid为{bilibili_uid}的动态",
             )
             return
         # 删除订阅
