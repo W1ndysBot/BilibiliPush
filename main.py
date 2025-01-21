@@ -386,6 +386,7 @@ async def handle_BilibilliPush_group_message(websocket, msg):
                 websocket, group_id, message_id, raw_message
             )
             await get_login_qr(websocket, group_id, message_id, raw_message)
+            await scan_login(websocket, group_id, message_id, raw_message)
     except Exception as e:
         logging.error(f"处理BilibilliPush群消息失败: {e}")
         await send_group_msg(
