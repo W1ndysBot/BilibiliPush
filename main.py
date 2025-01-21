@@ -454,7 +454,7 @@ async def check_dynamic(websocket):
                             await send_group_msg(
                                 websocket,
                                 group_id,
-                                f"请求被限制，可能是由于用户cookie过期。请更新cookie后重试。",
+                                f"监控用户动态的请求被限制，可能是由于访问cookie过期。请发送“登录B站”进行登录以更新cookie后重试。",
                             )
                             return  # 退出循环，不再进行接下来的扫描
                         # 提取最近一次动态的信息
