@@ -5,6 +5,7 @@ import os
 import sys
 import re
 import json
+import requests
 
 # 添加项目根目录到sys.path
 sys.path.append(
@@ -67,7 +68,7 @@ async def toggle_function_status(websocket, group_id, message_id, authorized):
 
 # 加载直播订阅文件
 def load_live_subscription(group_id):
-    file_path = os.path.join(DATA_DIR, f"{group_id}_live.json")
+    file_path = os.path.join(DATA_DIR, f"{group_id}_live_subscription.json")
     if not os.path.exists(file_path):
         return []
     with open(file_path, "r", encoding="utf-8") as f:
@@ -77,7 +78,7 @@ def load_live_subscription(group_id):
 
 # 保存直播订阅文件
 def save_live_subscription(group_id, bilibili_uid):
-    file_path = os.path.join(DATA_DIR, f"{group_id}_live.json")
+    file_path = os.path.join(DATA_DIR, f"{group_id}_live_subscription.json")
     if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
             subscriptions = json.load(f)
@@ -93,7 +94,7 @@ def save_live_subscription(group_id, bilibili_uid):
 
 # 加载动态订阅文件
 def load_dynamic_subscription(group_id):
-    file_path = os.path.join(DATA_DIR, f"{group_id}_dynamic.json")
+    file_path = os.path.join(DATA_DIR, f"{group_id}_dynamic_subscription.json")
     if not os.path.exists(file_path):
         return []
     with open(file_path, "r", encoding="utf-8") as f:
@@ -103,7 +104,7 @@ def load_dynamic_subscription(group_id):
 
 # 保存动态订阅文件
 def save_dynamic_subscription(group_id, bilibili_uid):
-    file_path = os.path.join(DATA_DIR, f"{group_id}_dynamic.json")
+    file_path = os.path.join(DATA_DIR, f"{group_id}_dynamic_subscription.json")
     if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
             subscriptions = json.load(f)
@@ -290,6 +291,137 @@ async def handle_BilibilliPush_group_message(websocket, msg):
         return
 
 
-# 定时检查直播和动态
-async def check_live_and_dynamic():
-    pass
+def get_previous_live_status(group_id, uid):
+    """
+    获取上一次的直播状态
+    """
+    file_path = os.path.join(DATA_DIR, f"{group_id}_live_status.json")
+    with open(file_path, "r", encoding="utf-8") as f:
+        subscriptions = json.load(f)
+    return subscriptions.get(uid, 0)
+
+
+def save_live_status(group_id, uid, live_status):
+    """
+    保存直播状态
+    """
+    file_path = os.path.join(DATA_DIR, f"{group_id}_live_status.json")
+    with open(file_path, "w", encoding="utf-8") as f:
+        subscriptions = json.load(f)
+        subscriptions[uid] = live_status
+        json.dump(subscriptions, f, ensure_ascii=False, indent=4)
+
+
+async def check_live_and_dynamic(websocket):
+    """
+    定时检查直播有无变化
+    """
+    try:
+        # 获取所有有数据的群，检查文件结尾是否是live_subscription.json
+        files = os.listdir(DATA_DIR)
+        groups = []
+        for file in files:
+            if file.endswith("_live_subscription.json"):
+                group_id = file.split("_")[0]
+                if group_id not in groups:
+                    groups.append(group_id)
+
+        # 对于每个群检查是否开启
+        for group_id in groups:
+            if load_function_status(group_id):
+                subscriptions = load_live_subscription(group_id)
+                # 获取所有订阅的uid的直播信息
+                for uid in subscriptions:
+                    # 获取uid的直播信息
+                    url = f"https://api.live.bilibili.com/room/v1/Room/getRoomInfoOld?mid={uid}"
+                    response = requests.get(url)
+                    if response.status_code == 200:
+                        data = response.json()
+                        # 提取live_status
+                        live_status = data.get("data").get("live_status")
+                        # 检查直播状态变化
+                        previous_status = get_previous_live_status(group_id, uid)
+                        if live_status != previous_status:
+                            save_live_status(group_id, uid, live_status)
+                            if live_status == 1:
+                                # 在直播状态为1时代表开播
+                                await send_group_msg(
+                                    websocket, group_id, f"uid为{uid}的主播开播了"
+                                )
+                            elif live_status == 0:
+                                # 在直播状态为0时代表关播
+                                await send_group_msg(
+                                    websocket, group_id, f"uid为{uid}的主播关播了"
+                                )
+    except Exception as e:
+        logging.error(f"定时检查直播有无变化失败: {e}")
+
+
+def is_new_dynamic(group_id, uid, dynamic_id):
+    """
+    检查是否是新动态
+    """
+    file_path = os.path.join(DATA_DIR, f"{group_id}_dynamic_status.json")
+    with open(file_path, "r", encoding="utf-8") as f:
+        subscriptions = json.load(f)
+    return dynamic_id not in subscriptions
+
+
+def save_latest_dynamic_id(group_id, uid, dynamic_id):
+    """
+    保存最新动态id
+    """
+    file_path = os.path.join(DATA_DIR, f"{group_id}_dynamic_status.json")
+    with open(file_path, "w", encoding="utf-8") as f:
+        subscriptions = json.load(f)
+        subscriptions[uid] = dynamic_id
+        json.dump(subscriptions, f, ensure_ascii=False, indent=4)
+
+
+# 定时检查有无新动态
+async def check_dynamic(websocket):
+    try:
+        # 获取所有有数据的群，检查文件结尾是否是dynamic_subscription.json
+        files = os.listdir(DATA_DIR)
+        groups = []
+        for file in files:
+            if file.endswith("_dynamic_subscription.json"):
+                group_id = file.split("_")[0]
+                if group_id not in groups:
+                    groups.append(group_id)
+
+        # 对于每个群检查是否开启
+        for group_id in groups:
+            if load_function_status(group_id):
+                subscriptions = load_dynamic_subscription(group_id)
+                for uid in subscriptions:
+                    url = f"https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/space?host_mid={uid}"
+                    response = requests.get(url)
+                    if response.status_code == 200:
+                        data = response.json()
+                        # 提取最近一次动态的信息
+                        if (
+                            data["code"] == 0
+                            and "data" in data
+                            and "items" in data["data"]
+                        ):
+                            latest_dynamic = data["data"]["items"][0]
+                            dynamic_id = latest_dynamic["id_str"]
+                            if is_new_dynamic(group_id, uid, dynamic_id):
+                                save_latest_dynamic_id(group_id, uid, dynamic_id)
+                                author_name = latest_dynamic["modules"][
+                                    "module_author"
+                                ]["name"]
+                                pub_time = latest_dynamic["modules"]["module_author"][
+                                    "pub_time"
+                                ]
+                                dynamic_text = latest_dynamic["modules"][
+                                    "module_dynamic"
+                                ]["desc"]["text"]
+                                await send_group_msg(
+                                    websocket,
+                                    group_id,
+                                    f"作者: {author_name}, 发布时间: {pub_time}, 动态内容: {dynamic_text}",
+                                )
+    except Exception as e:
+        logging.error(f"定时检查有无新动态失败: {e}")
