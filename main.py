@@ -382,10 +382,11 @@ def is_new_dynamic(group_id, uid, dynamic_id):
     """
     file_path = os.path.join(DATA_DIR, f"{group_id}_dynamic_status.json")
     if not os.path.exists(file_path):
-        # 初始化文件
+        # 初始化文件并保存最新动态ID
         with open(file_path, "w", encoding="utf-8") as f:
-            json.dump({}, f, ensure_ascii=False, indent=4)
-        return False  # 如果文件不存在，则初始化文件
+            subscriptions = {uid: [dynamic_id]}
+            json.dump(subscriptions, f, ensure_ascii=False, indent=4)
+        return False  # 初始化时不视为新动态
     with open(file_path, "r", encoding="utf-8") as f:
         subscriptions = json.load(f)
     return dynamic_id not in subscriptions.get(uid, [])
