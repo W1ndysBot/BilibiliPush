@@ -466,7 +466,10 @@ async def check_live(websocket):
                 for UID in subscriptions:
                     # 获取UID的直播信息
                     url = f"https://api.live.bilibili.com/room/v1/Room/getRoomInfoOld?mid={UID}"
-                    response = requests.get(url)
+                    headers = {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    }
+                    response = requests.get(url, headers=headers)
                     if response.status_code == 200:
                         data = response.json()
                         # 提取live_status
@@ -477,8 +480,18 @@ async def check_live(websocket):
                             save_live_status(group_id, UID, liveStatus)
                             if liveStatus == 1:
                                 # 在直播状态为1时代表开播
+                                title = data["data"]["title"]
+                                url = data["data"]["url"]
+                                cover = data["data"]["cover"]
+                                online = data["data"]["online"]
                                 await send_group_msg(
-                                    websocket, group_id, f"UID为【{UID}】的主播开播了"
+                                    websocket,
+                                    group_id,
+                                    f"UID为【{UID}】的主播开播了\n"
+                                    f"标题: {title}\n"
+                                    f"观看人数: {online}\n"
+                                    f"直播地址: {url}\n"
+                                    f"[CQ:image,file={cover}]",
                                 )
                             elif liveStatus == 0:
                                 # 在直播状态为0时代表关播
