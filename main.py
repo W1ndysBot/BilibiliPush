@@ -305,6 +305,9 @@ def get_previous_live_status(group_id, uid):
     """
     file_path = os.path.join(DATA_DIR, f"{group_id}_live_status.json")
     if not os.path.exists(file_path):
+        # 初始化文件
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump({}, f, ensure_ascii=False, indent=4)
         return 0  # 默认状态为0，表示未开播
     with open(file_path, "r", encoding="utf-8") as f:
         subscriptions = json.load(f)
@@ -379,7 +382,10 @@ def is_new_dynamic(group_id, uid, dynamic_id):
     """
     file_path = os.path.join(DATA_DIR, f"{group_id}_dynamic_status.json")
     if not os.path.exists(file_path):
-        return True  # 如果文件不存在，表示是新动态
+        # 初始化文件
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump({}, f, ensure_ascii=False, indent=4)
+        return False  # 如果文件不存在，则初始化文件
     with open(file_path, "r", encoding="utf-8") as f:
         subscriptions = json.load(f)
     return dynamic_id not in subscriptions.get(uid, [])
