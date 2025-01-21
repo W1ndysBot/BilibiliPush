@@ -304,6 +304,8 @@ def get_previous_live_status(group_id, uid):
     获取上一次的直播状态
     """
     file_path = os.path.join(DATA_DIR, f"{group_id}_live_status.json")
+    if not os.path.exists(file_path):
+        return 0  # 默认状态为0，表示未开播
     with open(file_path, "r", encoding="utf-8") as f:
         subscriptions = json.load(f)
     return subscriptions.get(uid, 0)
@@ -314,9 +316,15 @@ def save_live_status(group_id, uid, live_status):
     保存直播状态
     """
     file_path = os.path.join(DATA_DIR, f"{group_id}_live_status.json")
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            subscriptions = json.load(f)
+    else:
+        subscriptions = {}
+
+    subscriptions[uid] = live_status
+
     with open(file_path, "w", encoding="utf-8") as f:
-        subscriptions = json.load(f)
-        subscriptions[uid] = live_status
         json.dump(subscriptions, f, ensure_ascii=False, indent=4)
 
 
@@ -370,9 +378,11 @@ def is_new_dynamic(group_id, uid, dynamic_id):
     检查是否是新动态
     """
     file_path = os.path.join(DATA_DIR, f"{group_id}_dynamic_status.json")
+    if not os.path.exists(file_path):
+        return True  # 如果文件不存在，表示是新动态
     with open(file_path, "r", encoding="utf-8") as f:
         subscriptions = json.load(f)
-    return dynamic_id not in subscriptions
+    return dynamic_id not in subscriptions.get(uid, [])
 
 
 def save_latest_dynamic_id(group_id, uid, dynamic_id):
@@ -380,14 +390,25 @@ def save_latest_dynamic_id(group_id, uid, dynamic_id):
     保存最新动态id
     """
     file_path = os.path.join(DATA_DIR, f"{group_id}_dynamic_status.json")
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            subscriptions = json.load(f)
+    else:
+        subscriptions = {}
+
+    if uid not in subscriptions:
+        subscriptions[uid] = []
+
+    subscriptions[uid].append(dynamic_id)
+
     with open(file_path, "w", encoding="utf-8") as f:
-        subscriptions = json.load(f)
-        subscriptions[uid] = dynamic_id
         json.dump(subscriptions, f, ensure_ascii=False, indent=4)
 
 
-# 定时检查有无新动态
 async def check_dynamic(websocket):
+    """
+    定时检查有无新动态
+    """
     try:
         # 获取所有有数据的群，检查文件结尾是否是dynamic_subscription.json
         files = os.listdir(DATA_DIR)
@@ -429,7 +450,7 @@ async def check_dynamic(websocket):
                                 await send_group_msg(
                                     websocket,
                                     group_id,
-                                    f"作者: {author_name}, 发布时间: {pub_time}, 动态内容: {dynamic_text}",
+                                    f"uid:{uid}有新动态: 作者: {author_name}, 发布时间: {pub_time}, 动态内容: {dynamic_text}",
                                 )
     except Exception as e:
         logging.error(f"定时检查有无新动态失败: {e}")
