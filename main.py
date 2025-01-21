@@ -347,19 +347,19 @@ async def scan_login(websocket, group_id, message_id, raw_message):
                         await send_group_msg(
                             websocket,
                             group_id,
-                            f"[CQ:reply,id={message_id}]二维码已扫码未确认，请在手机上确认。",
+                            f"[CQ:reply,id={message_id}]登录未确认，请在手机上确认。",
                         )
                     elif poll_data["code"] == 86101:
                         await send_group_msg(
                             websocket,
                             group_id,
-                            f"[CQ:reply,id={message_id}]未扫码，请扫码。",
+                            f"[CQ:reply,id={message_id}]检测到链接未授权，请发送【请求登录】重新获取。",
                         )
                     elif poll_data["code"] == 86038:
                         await send_group_msg(
                             websocket,
                             group_id,
-                            f"[CQ:reply,id={message_id}]二维码已失效，请发送【请求登录】重新获取。",
+                            f"[CQ:reply,id={message_id}]会话已失效，请发送【请求登录】重新获取。",
                         )
                 else:
                     logging.error(f"扫码登录失败: {data['message']}")
