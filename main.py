@@ -124,15 +124,12 @@ def save_dynamic_subscription(group_id, user_id, bilibili_uid):
 
 
 # 添加直播订阅
-async def add_live_subscription(websocket, group_id, user_id, message_id, bilibili_uid):
+async def add_live_subscription(websocket, group_id, user_id, message_id, raw_message):
     try:
-        match = re.match(r"^订阅直播(\d+)$", bilibili_uid)
-        if not match:
-            await send_group_msg(
-                websocket,
-                group_id,
-                f"[CQ:reply,id={message_id}]请输入正确的Bilibili UID",
-            )
+        match = re.match(r"^订阅直播(\d+)$", raw_message)
+        if match:
+            bilibili_uid = match.group(1)
+        else:
             return
         # 检查是否已订阅
         if bilibili_uid in load_live_subscription(group_id, user_id):
@@ -160,16 +157,13 @@ async def add_live_subscription(websocket, group_id, user_id, message_id, bilibi
 
 # 取消直播订阅
 async def delete_live_subscription(
-    websocket, group_id, user_id, message_id, bilibili_uid
+    websocket, group_id, user_id, message_id, raw_message
 ):
     try:
-        match = re.match(r"^取消订阅直播(\d+)$", bilibili_uid)
-        if not match:
-            await send_group_msg(
-                websocket,
-                group_id,
-                f"[CQ:reply,id={message_id}]请输入正确的Bilibili UID",
-            )
+        match = re.match(r"^取消订阅直播(\d+)$", raw_message)
+        if match:
+            bilibili_uid = match.group(1)
+        else:
             return
         # 检查是否已订阅
         if bilibili_uid not in load_live_subscription(group_id, user_id):
@@ -198,16 +192,13 @@ async def delete_live_subscription(
 
 # 添加动态订阅
 async def add_dynamic_subscription(
-    websocket, group_id, user_id, message_id, bilibili_uid
+    websocket, group_id, user_id, message_id, raw_message
 ):
     try:
-        match = re.match(r"^订阅动态(\d+)$", bilibili_uid)
-        if not match:
-            await send_group_msg(
-                websocket,
-                group_id,
-                f"[CQ:reply,id={message_id}]请输入正确的Bilibili UID",
-            )
+        match = re.match(r"^订阅动态(\d+)$", raw_message)
+        if match:
+            bilibili_uid = match.group(1)
+        else:
             return
         # 检查是否已订阅
         if bilibili_uid in load_dynamic_subscription(group_id, user_id):
@@ -233,19 +224,17 @@ async def add_dynamic_subscription(
         )
 
 
-# 删除动态订阅
+# 取消动态订阅
 async def delete_dynamic_subscription(
-    websocket, group_id, user_id, message_id, bilibili_uid
+    websocket, group_id, user_id, message_id, raw_message
 ):
     try:
-        match = re.match(r"^取消订阅动态(\d+)$", bilibili_uid)
-        if not match:
-            await send_group_msg(
-                websocket,
-                group_id,
-                f"[CQ:reply,id={message_id}]请输入正确的Bilibili UID",
-            )
+        match = re.match(r"^取消订阅动态(\d+)$", raw_message)
+        if match:
+            bilibili_uid = match.group(1)
+        else:
             return
+
         # 检查是否已订阅
         if bilibili_uid not in load_dynamic_subscription(group_id, user_id):
             await send_group_msg(
@@ -283,7 +272,7 @@ async def handle_BilibilliPush_group_message(websocket, msg):
         authorized = user_id in owner_id
 
         # 开关
-        if raw_message == "BilibilliPush":
+        if raw_message == "bilipush":
             await toggle_function_status(websocket, group_id, message_id, authorized)
             return
         # 检查是否开启
@@ -309,3 +298,8 @@ async def handle_BilibilliPush_group_message(websocket, msg):
             + str(e),
         )
         return
+
+
+# 定时检查直播和动态
+async def check_live_and_dynamic():
+    pass
