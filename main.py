@@ -478,12 +478,12 @@ async def check_live(websocket):
                             if live_status == 1:
                                 # 在直播状态为1时代表开播
                                 await send_group_msg(
-                                    websocket, group_id, f"UID为{UID}的主播开播了"
+                                    websocket, group_id, f"UID为【{UID}】的主播开播了"
                                 )
                             elif live_status == 0:
                                 # 在直播状态为0时代表关播
                                 await send_group_msg(
-                                    websocket, group_id, f"UID为{UID}的主播关播了"
+                                    websocket, group_id, f"UID为【{UID}】的主播关播了"
                                 )
     except Exception as e:
         logging.error(f"定时检查直播有无变化失败: {e}")
@@ -593,7 +593,7 @@ async def check_dynamic(websocket):
                                         "module_dynamic"
                                     ]["desc"]["text"]
                                     message = (
-                                        f"UID:{UID}有新动态: \n"
+                                        f"UID:【{UID}】有新动态: \n"
                                         f"作者: {author_name}\n"
                                         f"发布时间: {pub_time}\n"
                                         f"动态内容: {dynamic_text}\n"
@@ -609,17 +609,21 @@ async def check_dynamic(websocket):
                                     video_url = latest_dynamic["modules"][
                                         "module_dynamic"
                                     ]["major"]["archive"]["jump_url"]
+                                    video_cover = latest_dynamic["modules"][
+                                        "module_dynamic"
+                                    ]["major"]["archive"]["cover"]
                                     message = (
-                                        f"UID:{UID}投稿了新视频: \n"
+                                        f"UID:【{UID}】投稿了新视频: \n"
                                         f"作者: {author_name}\n"
                                         f"发布时间: {pub_time}\n"
                                         f"视频标题: {video_title}\n"
                                         f"视频描述: {video_desc}\n"
-                                        f"视频地址: {video_url}"
+                                        f"视频地址: {video_url}\n"
+                                        f"[CQ:image,file={video_cover}]"
                                     )
                                 else:
                                     message = (
-                                        f"UID:{UID}有新动态: \n"
+                                        f"UID:【{UID}】有新动态: \n"
                                         f"作者: {author_name}\n"
                                         f"发布时间: {pub_time}\n"
                                         f"动态类型: {dynamic_type}\n"
