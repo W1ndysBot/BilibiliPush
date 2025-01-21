@@ -77,7 +77,7 @@ def load_live_subscription(group_id):
 
 
 # 保存直播订阅文件
-def save_live_subscription(group_id, bilibili_uid):
+def save_live_subscription(group_id, bilibili_UID):
     file_path = os.path.join(DATA_DIR, f"{group_id}_live_subscription.json")
     if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
@@ -85,8 +85,8 @@ def save_live_subscription(group_id, bilibili_uid):
     else:
         subscriptions = []
 
-    if bilibili_uid not in subscriptions:
-        subscriptions.append(bilibili_uid)
+    if bilibili_UID not in subscriptions:
+        subscriptions.append(bilibili_UID)
 
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(subscriptions, f, ensure_ascii=False, indent=4)
@@ -103,7 +103,7 @@ def load_dynamic_subscription(group_id):
 
 
 # 保存动态订阅文件
-def save_dynamic_subscription(group_id, bilibili_uid):
+def save_dynamic_subscription(group_id, bilibili_UID):
     file_path = os.path.join(DATA_DIR, f"{group_id}_dynamic_subscription.json")
     if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
@@ -111,8 +111,8 @@ def save_dynamic_subscription(group_id, bilibili_uid):
     else:
         subscriptions = []
 
-    if bilibili_uid not in subscriptions:
-        subscriptions.append(bilibili_uid)
+    if bilibili_UID not in subscriptions:
+        subscriptions.append(bilibili_UID)
 
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(subscriptions, f, ensure_ascii=False, indent=4)
@@ -123,23 +123,23 @@ async def add_live_subscription(websocket, group_id, message_id, raw_message):
     try:
         match = re.match(r"^订阅直播(\d+)$", raw_message)
         if match:
-            bilibili_uid = match.group(1)
+            bilibili_UID = match.group(1)
         else:
             return
         # 检查是否已订阅
-        if bilibili_uid in load_live_subscription(group_id):
+        if bilibili_UID in load_live_subscription(group_id):
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}]本群已订阅uid为{bilibili_uid}的主播",
+                f"[CQ:reply,id={message_id}]本群已订阅UID为{bilibili_UID}的主播",
             )
             return
         # 添加订阅
-        save_live_subscription(group_id, bilibili_uid)
+        save_live_subscription(group_id, bilibili_UID)
         await send_group_msg(
             websocket,
             group_id,
-            f"[CQ:reply,id={message_id}]已订阅uid为{bilibili_uid}的主播",
+            f"[CQ:reply,id={message_id}]已订阅UID为{bilibili_UID}的主播",
         )
     except Exception as e:
         logging.error(f"添加直播订阅失败: {e}")
@@ -155,20 +155,20 @@ async def delete_live_subscription(websocket, group_id, message_id, raw_message)
     try:
         match = re.match(r"^取消订阅直播(\d+)$", raw_message)
         if match:
-            bilibili_uid = match.group(1)
+            bilibili_UID = match.group(1)
         else:
             return
         # 检查是否已订阅
-        if bilibili_uid not in load_live_subscription(group_id):
+        if bilibili_UID not in load_live_subscription(group_id):
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}]本群未订阅uid为{bilibili_uid}的主播",
+                f"[CQ:reply,id={message_id}]本群未订阅UID为{bilibili_UID}的主播",
             )
             return
         # 删除订阅
         subscriptions = load_live_subscription(group_id)
-        subscriptions.remove(bilibili_uid)
+        subscriptions.remove(bilibili_UID)
         with open(
             os.path.join(DATA_DIR, f"{group_id}_live.json"), "w", encoding="utf-8"
         ) as f:
@@ -176,7 +176,7 @@ async def delete_live_subscription(websocket, group_id, message_id, raw_message)
         await send_group_msg(
             websocket,
             group_id,
-            f"[CQ:reply,id={message_id}]已取消订阅uid为{bilibili_uid}的主播",
+            f"[CQ:reply,id={message_id}]已取消订阅UID为{bilibili_UID}的主播",
         )
     except Exception as e:
         logging.error(f"删除直播订阅失败: {e}")
@@ -192,23 +192,23 @@ async def add_dynamic_subscription(websocket, group_id, message_id, raw_message)
     try:
         match = re.match(r"^订阅动态(\d+)$", raw_message)
         if match:
-            bilibili_uid = match.group(1)
+            bilibili_UID = match.group(1)
         else:
             return
         # 检查是否已订阅
-        if bilibili_uid in load_dynamic_subscription(group_id):
+        if bilibili_UID in load_dynamic_subscription(group_id):
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}]本群已订阅uid为{bilibili_uid}的动态",
+                f"[CQ:reply,id={message_id}]本群已订阅UID为{bilibili_UID}的动态",
             )
             return
         # 添加订阅
-        save_dynamic_subscription(group_id, bilibili_uid)
+        save_dynamic_subscription(group_id, bilibili_UID)
         await send_group_msg(
             websocket,
             group_id,
-            f"[CQ:reply,id={message_id}]已订阅uid为{bilibili_uid}的动态",
+            f"[CQ:reply,id={message_id}]已订阅UID为{bilibili_UID}的动态",
         )
     except Exception as e:
         logging.error(f"添加动态订阅失败: {e}")
@@ -224,20 +224,20 @@ async def delete_dynamic_subscription(websocket, group_id, message_id, raw_messa
     try:
         match = re.match(r"^取消订阅动态(\d+)$", raw_message)
         if match:
-            bilibili_uid = match.group(1)
+            bilibili_UID = match.group(1)
         else:
             return
         # 检查是否已订阅
-        if bilibili_uid not in load_dynamic_subscription(group_id):
+        if bilibili_UID not in load_dynamic_subscription(group_id):
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}]本群未订阅uid为{bilibili_uid}的动态",
+                f"[CQ:reply,id={message_id}]本群未订阅UID为{bilibili_UID}的动态",
             )
             return
         # 删除订阅
         subscriptions = load_dynamic_subscription(group_id)
-        subscriptions.remove(bilibili_uid)
+        subscriptions.remove(bilibili_UID)
         with open(
             os.path.join(DATA_DIR, f"{group_id}_dynamic.json"), "w", encoding="utf-8"
         ) as f:
@@ -245,7 +245,7 @@ async def delete_dynamic_subscription(websocket, group_id, message_id, raw_messa
         await send_group_msg(
             websocket,
             group_id,
-            f"[CQ:reply,id={message_id}]已取消订阅uid为{bilibili_uid}的动态",
+            f"[CQ:reply,id={message_id}]已取消订阅UID为{bilibili_UID}的动态",
         )
     except Exception as e:
         logging.error(f"删除动态订阅失败: {e}")
@@ -329,7 +329,7 @@ async def scan_login(websocket, group_id, message_id, raw_message):
                         # 登录成功，提取并保存 SESSDATA
                         cookies = response.cookies.get_dict()
                         sessdata = cookies.get("SESSDATA", "")
-                        
+
                         with open(
                             os.path.join(DATA_DIR, "sessdata.txt"),
                             "w",
@@ -412,7 +412,7 @@ async def check_live_and_dynamic(websocket):
     await check_dynamic(websocket)
 
 
-def get_previous_live_status(group_id, uid):
+def get_previous_live_status(group_id, UID):
     """
     获取上一次的直播状态
     """
@@ -424,10 +424,10 @@ def get_previous_live_status(group_id, uid):
         return 0  # 默认状态为0，表示未开播
     with open(file_path, "r", encoding="utf-8") as f:
         subscriptions = json.load(f)
-    return subscriptions.get(uid, 0)
+    return subscriptions.get(UID, 0)
 
 
-def save_live_status(group_id, uid, live_status):
+def save_live_status(group_id, UID, live_status):
     """
     保存直播状态
     """
@@ -438,7 +438,7 @@ def save_live_status(group_id, uid, live_status):
     else:
         subscriptions = {}
 
-    subscriptions[uid] = live_status
+    subscriptions[UID] = live_status
 
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(subscriptions, f, ensure_ascii=False, indent=4)
@@ -462,34 +462,34 @@ async def check_live(websocket):
         for group_id in groups:
             if load_function_status(group_id):
                 subscriptions = load_live_subscription(group_id)
-                # 获取所有订阅的uid的直播信息
-                for uid in subscriptions:
-                    # 获取uid的直播信息
-                    url = f"https://api.live.bilibili.com/room/v1/Room/getRoomInfoOld?mid={uid}"
+                # 获取所有订阅的UID的直播信息
+                for UID in subscriptions:
+                    # 获取UID的直播信息
+                    url = f"https://api.live.bilibili.com/room/v1/Room/getRoomInfoOld?mid={UID}"
                     response = requests.get(url)
                     if response.status_code == 200:
                         data = response.json()
                         # 提取live_status
                         live_status = data.get("data").get("live_status")
                         # 检查直播状态变化
-                        previous_status = get_previous_live_status(group_id, uid)
+                        previous_status = get_previous_live_status(group_id, UID)
                         if live_status != previous_status:
-                            save_live_status(group_id, uid, live_status)
+                            save_live_status(group_id, UID, live_status)
                             if live_status == 1:
                                 # 在直播状态为1时代表开播
                                 await send_group_msg(
-                                    websocket, group_id, f"uid为{uid}的主播开播了"
+                                    websocket, group_id, f"UID为{UID}的主播开播了"
                                 )
                             elif live_status == 0:
                                 # 在直播状态为0时代表关播
                                 await send_group_msg(
-                                    websocket, group_id, f"uid为{uid}的主播关播了"
+                                    websocket, group_id, f"UID为{UID}的主播关播了"
                                 )
     except Exception as e:
         logging.error(f"定时检查直播有无变化失败: {e}")
 
 
-def is_new_dynamic(group_id, uid, dynamic_id):
+def is_new_dynamic(group_id, UID, dynamic_id):
     """
     检查是否是新动态
     """
@@ -497,15 +497,15 @@ def is_new_dynamic(group_id, uid, dynamic_id):
     if not os.path.exists(file_path):
         # 初始化文件并保存最新动态ID
         with open(file_path, "w", encoding="utf-8") as f:
-            subscriptions = {uid: [dynamic_id]}
+            subscriptions = {UID: [dynamic_id]}
             json.dump(subscriptions, f, ensure_ascii=False, indent=4)
         return False  # 初始化时不视为新动态
     with open(file_path, "r", encoding="utf-8") as f:
         subscriptions = json.load(f)
-    return dynamic_id not in subscriptions.get(uid, [])
+    return dynamic_id not in subscriptions.get(UID, [])
 
 
-def save_latest_dynamic_id(group_id, uid, dynamic_id):
+def save_latest_dynamic_id(group_id, UID, dynamic_id):
     """
     保存最新动态id
     """
@@ -516,10 +516,10 @@ def save_latest_dynamic_id(group_id, uid, dynamic_id):
     else:
         subscriptions = {}
 
-    if uid not in subscriptions:
-        subscriptions[uid] = []
+    if UID not in subscriptions:
+        subscriptions[UID] = []
 
-    subscriptions[uid].append(dynamic_id)
+    subscriptions[UID].append(dynamic_id)
 
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(subscriptions, f, ensure_ascii=False, indent=4)
@@ -543,8 +543,8 @@ async def check_dynamic(websocket):
         for group_id in groups:
             if load_function_status(group_id):
                 subscriptions = load_dynamic_subscription(group_id)
-                for uid in subscriptions:
-                    url = f"https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/space?host_mid={uid}"
+                for UID in subscriptions:
+                    url = f"https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/space?host_mid={UID}"
                     # 获取cookie
                     with open(
                         os.path.join(DATA_DIR, "sessdata.txt"), "r", encoding="utf-8"
@@ -574,8 +574,8 @@ async def check_dynamic(websocket):
                         ):
                             latest_dynamic = data["data"]["items"][0]
                             dynamic_id = latest_dynamic["id_str"]
-                            if is_new_dynamic(group_id, uid, dynamic_id):
-                                save_latest_dynamic_id(group_id, uid, dynamic_id)
+                            if is_new_dynamic(group_id, UID, dynamic_id):
+                                save_latest_dynamic_id(group_id, UID, dynamic_id)
                                 author_name = latest_dynamic["modules"][
                                     "module_author"
                                 ]["name"]
@@ -588,7 +588,7 @@ async def check_dynamic(websocket):
                                 await send_group_msg(
                                     websocket,
                                     group_id,
-                                    f"uid:{uid}有新动态: 作者: {author_name}, 发布时间: {pub_time}, 动态内容: {dynamic_text}",
+                                    f"UID:{UID}有新动态: \n作者: {author_name}\n发布时间: {pub_time}\n动态内容: {dynamic_text}",
                                 )
     except Exception as e:
         logging.error(f"定时检查有无新动态失败: {e}")
