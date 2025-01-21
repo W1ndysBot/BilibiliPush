@@ -470,17 +470,17 @@ async def check_live(websocket):
                     if response.status_code == 200:
                         data = response.json()
                         # 提取live_status
-                        live_status = data.get("data").get("live_status")
+                        liveStatus = data.get("data").get("liveStatus")
                         # 检查直播状态变化
-                        previous_status = get_previous_live_status(group_id, UID)
-                        if live_status != previous_status:
-                            save_live_status(group_id, UID, live_status)
-                            if live_status == 1:
+                        PreviousStatus = get_previous_live_status(group_id, UID)
+                        if liveStatus != PreviousStatus:
+                            save_live_status(group_id, UID, liveStatus)
+                            if liveStatus == 1:
                                 # 在直播状态为1时代表开播
                                 await send_group_msg(
                                     websocket, group_id, f"UID为【{UID}】的主播开播了"
                                 )
-                            elif live_status == 0:
+                            elif liveStatus == 0:
                                 # 在直播状态为0时代表关播
                                 await send_group_msg(
                                     websocket, group_id, f"UID为【{UID}】的主播关播了"
