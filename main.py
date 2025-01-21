@@ -170,7 +170,9 @@ async def delete_live_subscription(websocket, group_id, message_id, raw_message)
         subscriptions = load_live_subscription(group_id)
         subscriptions.remove(bilibili_UID)
         with open(
-            os.path.join(DATA_DIR, f"{group_id}_live_subscription.json"), "w", encoding="utf-8"
+            os.path.join(DATA_DIR, f"{group_id}_live_subscription.json"),
+            "w",
+            encoding="utf-8",
         ) as f:
             json.dump(subscriptions, f, ensure_ascii=False, indent=4)
         await send_group_msg(
