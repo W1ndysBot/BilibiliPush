@@ -261,7 +261,7 @@ async def get_login_qr(websocket, group_id, message_id, raw_message):
     获取登录二维码
     """
     try:
-        match = re.match(r"^登录B站$", raw_message)
+        match = re.match(r"^请求登录$", raw_message)
         if match:
             # 发送请求获取二维码和秘钥
             headers = {
@@ -281,7 +281,7 @@ async def get_login_qr(websocket, group_id, message_id, raw_message):
                     await send_group_msg(
                         websocket,
                         group_id,
-                        f"[CQ:reply,id={message_id}]请扫码登录哔哩哔哩: {qr_url}",
+                        f"[CQ:reply,id={message_id}]请复制下面地址粘贴到哔哩哔哩客户端确认登录，确认登录后请在群里发送【确认登录】\n\n{qr_url}",
                     )
 
                     # 保存扫码登录秘钥到本地文件
@@ -302,7 +302,7 @@ async def scan_login(websocket, group_id, message_id, raw_message):
     扫码登录
     """
     try:
-        match = re.match(r"^扫码登录$", raw_message)
+        match = re.match(r"^确认登录$", raw_message)
         if match:
             # 读取之前保存的 qrcode_key
             with open(
@@ -329,6 +329,7 @@ async def scan_login(websocket, group_id, message_id, raw_message):
                         # 登录成功，提取并保存 SESSDATA
                         cookies = response.cookies.get_dict()
                         sessdata = cookies.get("SESSDATA", "")
+                        
                         with open(
                             os.path.join(DATA_DIR, "sessdata.txt"),
                             "w",
@@ -562,7 +563,7 @@ async def check_dynamic(websocket):
                             await send_group_msg(
                                 websocket,
                                 group_id,
-                                f"监控用户动态的请求被限制，可能是由于访问cookie过期。请发送【登录B站】进行登录以更新cookie后重试。",
+                                f"监控用户动态的请求被限制，可能是由于访问cookie过期。请发送【请求登录】进行登录以更新cookie后重试。",
                             )
                             return  # 退出循环，不再进行接下来的扫描
                         # 提取最近一次动态的信息
