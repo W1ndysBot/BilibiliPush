@@ -291,6 +291,14 @@ async def handle_BilibilliPush_group_message(websocket, msg):
         return
 
 
+async def check_live_and_dynamic(websocket):
+    """
+    定时检查直播有无变化
+    """
+    await check_live(websocket)
+    await check_dynamic(websocket)
+
+
 def get_previous_live_status(group_id, uid):
     """
     获取上一次的直播状态
@@ -312,7 +320,7 @@ def save_live_status(group_id, uid, live_status):
         json.dump(subscriptions, f, ensure_ascii=False, indent=4)
 
 
-async def check_live_and_dynamic(websocket):
+async def check_live(websocket):
     """
     定时检查直播有无变化
     """
