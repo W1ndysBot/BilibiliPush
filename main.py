@@ -359,7 +359,7 @@ async def scan_login(websocket, group_id, message_id, raw_message):
                         await send_group_msg(
                             websocket,
                             group_id,
-                            f"[CQ:reply,id={message_id}]二维码已失效，请重新获取。",
+                            f"[CQ:reply,id={message_id}]二维码已失效，请发送【请求登录】重新获取。",
                         )
                 else:
                     logging.error(f"扫码登录失败: {data['message']}")
