@@ -311,9 +311,14 @@ async def scan_login(websocket, group_id, message_id, raw_message):
                 qrcode_key = f.read().strip()
 
             # 轮询二维码状态
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Referer": "https://passport.bilibili.com/login",
+            }
             response = requests.get(
                 "https://passport.bilibili.com/x/passport-login/web/qrcode/poll",
                 params={"qrcode_key": qrcode_key},
+                headers=headers,
             )
 
             if response.status_code == 200:
