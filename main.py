@@ -66,65 +66,59 @@ async def toggle_function_status(websocket, group_id, message_id, authorized):
 
 
 # 加载直播订阅文件
-def load_live_subscription(group_id, user_id):
+def load_live_subscription(group_id):
     file_path = os.path.join(DATA_DIR, f"{group_id}_live.json")
     if not os.path.exists(file_path):
         return []
     with open(file_path, "r", encoding="utf-8") as f:
         subscriptions = json.load(f)
-    return subscriptions.get(user_id, [])
+    return subscriptions
 
 
 # 保存直播订阅文件
-def save_live_subscription(group_id, user_id, bilibili_uid):
+def save_live_subscription(group_id, bilibili_uid):
     file_path = os.path.join(DATA_DIR, f"{group_id}_live.json")
     if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
             subscriptions = json.load(f)
     else:
-        subscriptions = {}
+        subscriptions = []
 
-    if user_id not in subscriptions:
-        subscriptions[user_id] = []
-
-    if bilibili_uid not in subscriptions[user_id]:
-        subscriptions[user_id].append(bilibili_uid)
+    if bilibili_uid not in subscriptions:
+        subscriptions.append(bilibili_uid)
 
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(subscriptions, f, ensure_ascii=False, indent=4)
 
 
 # 加载动态订阅文件
-def load_dynamic_subscription(group_id, user_id):
+def load_dynamic_subscription(group_id):
     file_path = os.path.join(DATA_DIR, f"{group_id}_dynamic.json")
     if not os.path.exists(file_path):
         return []
     with open(file_path, "r", encoding="utf-8") as f:
         subscriptions = json.load(f)
-    return subscriptions.get(user_id, [])
+    return subscriptions
 
 
 # 保存动态订阅文件
-def save_dynamic_subscription(group_id, user_id, bilibili_uid):
+def save_dynamic_subscription(group_id, bilibili_uid):
     file_path = os.path.join(DATA_DIR, f"{group_id}_dynamic.json")
     if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
             subscriptions = json.load(f)
     else:
-        subscriptions = {}
+        subscriptions = []
 
-    if user_id not in subscriptions:
-        subscriptions[user_id] = []
-
-    if bilibili_uid not in subscriptions[user_id]:
-        subscriptions[user_id].append(bilibili_uid)
+    if bilibili_uid not in subscriptions:
+        subscriptions.append(bilibili_uid)
 
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(subscriptions, f, ensure_ascii=False, indent=4)
 
 
 # 添加直播订阅
-async def add_live_subscription(websocket, group_id, user_id, message_id, raw_message):
+async def add_live_subscription(websocket, group_id, message_id, raw_message):
     try:
         match = re.match(r"^订阅直播(\d+)$", raw_message)
         if match:
@@ -132,7 +126,7 @@ async def add_live_subscription(websocket, group_id, user_id, message_id, raw_me
         else:
             return
         # 检查是否已订阅
-        if bilibili_uid in load_live_subscription(group_id, user_id):
+        if bilibili_uid in load_live_subscription(group_id):
             await send_group_msg(
                 websocket,
                 group_id,
@@ -140,7 +134,7 @@ async def add_live_subscription(websocket, group_id, user_id, message_id, raw_me
             )
             return
         # 添加订阅
-        save_live_subscription(group_id, user_id, bilibili_uid)
+        save_live_subscription(group_id, bilibili_uid)
         await send_group_msg(
             websocket,
             group_id,
@@ -156,9 +150,7 @@ async def add_live_subscription(websocket, group_id, user_id, message_id, raw_me
 
 
 # 取消直播订阅
-async def delete_live_subscription(
-    websocket, group_id, user_id, message_id, raw_message
-):
+async def delete_live_subscription(websocket, group_id, message_id, raw_message):
     try:
         match = re.match(r"^取消订阅直播(\d+)$", raw_message)
         if match:
@@ -166,7 +158,7 @@ async def delete_live_subscription(
         else:
             return
         # 检查是否已订阅
-        if bilibili_uid not in load_live_subscription(group_id, user_id):
+        if bilibili_uid not in load_live_subscription(group_id):
             await send_group_msg(
                 websocket,
                 group_id,
@@ -174,13 +166,17 @@ async def delete_live_subscription(
             )
             return
         # 删除订阅
-        save_live_subscription(group_id, user_id, bilibili_uid)
+        subscriptions = load_live_subscription(group_id)
+        subscriptions.remove(bilibili_uid)
+        with open(
+            os.path.join(DATA_DIR, f"{group_id}_live.json"), "w", encoding="utf-8"
+        ) as f:
+            json.dump(subscriptions, f, ensure_ascii=False, indent=4)
         await send_group_msg(
             websocket,
             group_id,
             f"[CQ:reply,id={message_id}]已取消订阅uid为{bilibili_uid}的主播",
         )
-
     except Exception as e:
         logging.error(f"删除直播订阅失败: {e}")
         await send_group_msg(
@@ -191,9 +187,7 @@ async def delete_live_subscription(
 
 
 # 添加动态订阅
-async def add_dynamic_subscription(
-    websocket, group_id, user_id, message_id, raw_message
-):
+async def add_dynamic_subscription(websocket, group_id, message_id, raw_message):
     try:
         match = re.match(r"^订阅动态(\d+)$", raw_message)
         if match:
@@ -201,7 +195,7 @@ async def add_dynamic_subscription(
         else:
             return
         # 检查是否已订阅
-        if bilibili_uid in load_dynamic_subscription(group_id, user_id):
+        if bilibili_uid in load_dynamic_subscription(group_id):
             await send_group_msg(
                 websocket,
                 group_id,
@@ -209,7 +203,7 @@ async def add_dynamic_subscription(
             )
             return
         # 添加订阅
-        save_dynamic_subscription(group_id, user_id, bilibili_uid)
+        save_dynamic_subscription(group_id, bilibili_uid)
         await send_group_msg(
             websocket,
             group_id,
@@ -225,18 +219,15 @@ async def add_dynamic_subscription(
 
 
 # 取消动态订阅
-async def delete_dynamic_subscription(
-    websocket, group_id, user_id, message_id, raw_message
-):
+async def delete_dynamic_subscription(websocket, group_id, message_id, raw_message):
     try:
         match = re.match(r"^取消订阅动态(\d+)$", raw_message)
         if match:
             bilibili_uid = match.group(1)
         else:
             return
-
         # 检查是否已订阅
-        if bilibili_uid not in load_dynamic_subscription(group_id, user_id):
+        if bilibili_uid not in load_dynamic_subscription(group_id):
             await send_group_msg(
                 websocket,
                 group_id,
@@ -244,7 +235,12 @@ async def delete_dynamic_subscription(
             )
             return
         # 删除订阅
-        save_dynamic_subscription(group_id, user_id, bilibili_uid)
+        subscriptions = load_dynamic_subscription(group_id)
+        subscriptions.remove(bilibili_uid)
+        with open(
+            os.path.join(DATA_DIR, f"{group_id}_dynamic.json"), "w", encoding="utf-8"
+        ) as f:
+            json.dump(subscriptions, f, ensure_ascii=False, indent=4)
         await send_group_msg(
             websocket,
             group_id,
@@ -277,17 +273,11 @@ async def handle_BilibilliPush_group_message(websocket, msg):
             return
         # 检查是否开启
         if load_function_status(group_id):
-            await add_live_subscription(
-                websocket, group_id, user_id, message_id, raw_message
-            )
-            await add_dynamic_subscription(
-                websocket, group_id, user_id, message_id, raw_message
-            )
-            await delete_live_subscription(
-                websocket, group_id, user_id, message_id, raw_message
-            )
+            await add_live_subscription(websocket, group_id, message_id, raw_message)
+            await add_dynamic_subscription(websocket, group_id, message_id, raw_message)
+            await delete_live_subscription(websocket, group_id, message_id, raw_message)
             await delete_dynamic_subscription(
-                websocket, group_id, user_id, message_id, raw_message
+                websocket, group_id, message_id, raw_message
             )
     except Exception as e:
         logging.error(f"处理BilibilliPush群消息失败: {e}")
