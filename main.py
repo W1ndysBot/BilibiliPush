@@ -256,6 +256,18 @@ async def delete_dynamic_subscription(websocket, group_id, message_id, raw_messa
         )
 
 
+# 获取登录二维码
+async def get_login_qr(websocket, group_id, message_id, raw_message):
+    try:
+        match = re.match(r"^获取登录二维码$", raw_message)
+        if match:
+            await send_group_msg(
+                websocket, group_id, f"[CQ:reply,id={message_id}]请扫码登录哔哩哔哩"
+            )
+    except Exception as e:
+        logging.error(f"获取登录二维码失败: {e}")
+
+
 # 群消息处理函数
 async def handle_BilibilliPush_group_message(websocket, msg):
     # 确保数据目录存在
@@ -280,6 +292,7 @@ async def handle_BilibilliPush_group_message(websocket, msg):
             await delete_dynamic_subscription(
                 websocket, group_id, message_id, raw_message
             )
+            await get_login_qr(websocket, group_id, message_id, raw_message)
     except Exception as e:
         logging.error(f"处理BilibilliPush群消息失败: {e}")
         await send_group_msg(
@@ -435,6 +448,15 @@ async def check_dynamic(websocket):
                     response = requests.get(url)
                     if response.status_code == 200:
                         data = response.json()
+                        # 检查是否返回错误代码 -352
+                        if data["code"] == -352:
+                            logging.warning(f"请求被限制: {data['message']}")
+                            await send_group_msg(
+                                websocket,
+                                group_id,
+                                f"请求被限制，可能是由于用户cookie过期。请更新cookie后重试。",
+                            )
+                            return  # 退出循环，不再进行接下来的扫描
                         # 提取最近一次动态的信息
                         if (
                             data["code"] == 0
