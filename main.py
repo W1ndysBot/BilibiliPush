@@ -256,17 +256,84 @@ async def delete_dynamic_subscription(websocket, group_id, message_id, raw_messa
         )
 
 
-# 获取登录二维码
 async def get_login_qr(websocket, group_id, message_id, raw_message):
+    """
+    获取登录二维码
+    """
     try:
-        match = re.match(r"^获取登录二维码$", raw_message)
+        match = re.match(r"^登录B站$", raw_message)
         if match:
-            await send_group_msg(
-                websocket, group_id, f"[CQ:reply,id={message_id}]请扫码登录哔哩哔哩"
-            )
+            # 发送请求获取二维码和秘钥
+            response = requests.get('https://passport.bilibili.com/x/passport-login/web/qrcode/generate')
+            if response.status_code == 200:
+                data = response.json()
+                if data['code'] == 0:
+                    qr_url = data['data']['url']
+                    qrcode_key = data['data']['qrcode_key']
+                    
+                    # 发送二维码URL给用户
+                    await send_group_msg(
+                        websocket, group_id, f"[CQ:reply,id={message_id}]请扫码登录哔哩哔哩: {qr_url}"
+                    )
+                    
+                    # 保存扫码登录秘钥到本地文件
+                    with open(os.path.join(DATA_DIR, 'qrcode_key.txt'), 'w', encoding='utf-8') as f:
+                        f.write(qrcode_key)
+                else:
+                    logging.error(f"获取二维码失败: {data['message']}")
+            else:
+                logging.error(f"请求二维码失败，状态码: {response.status_code}")
     except Exception as e:
         logging.error(f"获取登录二维码失败: {e}")
 
+async def scan_login(websocket, group_id, message_id, raw_message):
+    """
+    扫码登录
+    """
+    try:
+        match = re.match(r"^扫码登录$", raw_message)
+        if match:
+            # 读取之前保存的 qrcode_key
+            with open(os.path.join(DATA_DIR, 'qrcode_key.txt'), 'r', encoding='utf-8') as f:
+                qrcode_key = f.read().strip()
+
+            # 轮询二维码状态
+            response = requests.get(
+                'https://passport.bilibili.com/x/passport-login/web/qrcode/poll',
+                params={'qrcode_key': qrcode_key}
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                if data['code'] == 0:
+                    poll_data = data['data']
+                    if poll_data['code'] == 0:
+                        # 登录成功，提取并保存 SESSDATA
+                        cookies = response.cookies.get_dict()
+                        sessdata = cookies.get('SESSDATA', '')
+                        with open(os.path.join(DATA_DIR, 'sessdata.txt'), 'w', encoding='utf-8') as f:
+                            f.write(sessdata)
+                        await send_group_msg(
+                            websocket, group_id, f"[CQ:reply,id={message_id}]登录成功，SESSDATA已保存。"
+                        )
+                    elif poll_data['code'] == 86090:
+                        await send_group_msg(
+                            websocket, group_id, f"[CQ:reply,id={message_id}]二维码已扫码未确认，请在手机上确认。"
+                        )
+                    elif poll_data['code'] == 86101:
+                        await send_group_msg(
+                            websocket, group_id, f"[CQ:reply,id={message_id}]未扫码，请扫码。"
+                        )
+                    elif poll_data['code'] == 86038:
+                        await send_group_msg(
+                            websocket, group_id, f"[CQ:reply,id={message_id}]二维码已失效，请重新获取。"
+                        )
+                else:
+                    logging.error(f"扫码登录失败: {data['message']}")
+            else:
+                logging.error(f"请求扫码登录失败，状态码: {response.status_code}")
+    except Exception as e:
+        logging.error(f"扫码登录失败: {e}")
 
 # 群消息处理函数
 async def handle_BilibilliPush_group_message(websocket, msg):
@@ -454,7 +521,7 @@ async def check_dynamic(websocket):
                             await send_group_msg(
                                 websocket,
                                 group_id,
-                                f"监控用户动态的请求被限制，可能是由于访问cookie过期。请发送“登录B站”进行登录以更新cookie后重试。",
+                                f"监控用户动态的请求被限制，可能是由于访问cookie过期。请发送【登录B站】进行登录以更新cookie后重试。",
                             )
                             return  # 退出循环，不再进行接下来的扫描
                         # 提取最近一次动态的信息
