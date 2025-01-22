@@ -464,7 +464,6 @@ async def check_live(websocket):
         for group_id in groups:
             if load_function_status(group_id):
                 subscriptions = load_live_subscription(group_id)
-                # 获取所有订阅的UID的直播信息
                 for UID in subscriptions:
                     # 获取UID的直播信息
                     url = f"https://api.live.bilibili.com/room/v1/Room/getRoomInfoOld?mid={UID}"
@@ -474,13 +473,24 @@ async def check_live(websocket):
                     response = requests.get(url, headers=headers)
                     if response.status_code == 200:
                         data = response.json()
-                        # 提取live_status
                         liveStatus = data.get("data").get("liveStatus")
-                        # 检查直播状态变化
                         PreviousStatus = get_previous_live_status(group_id, UID)
                         if liveStatus != PreviousStatus:
                             save_live_status(group_id, UID, liveStatus)
                             if liveStatus == 1:
+                                # 获取用户昵称
+                                user_info_url = f"https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/space?host_mid={UID}"
+                                user_response = requests.get(
+                                    user_info_url, headers=headers
+                                )
+                                if user_response.status_code == 200:
+                                    user_data = user_response.json()
+                                    user_name = user_data["data"]["items"][0][
+                                        "modules"
+                                    ]["module_author"]["name"]
+                                else:
+                                    user_name = "未知用户"
+
                                 # 在直播状态为1时代表开播
                                 title = data["data"]["title"]
                                 url = data["data"]["url"]
@@ -489,14 +499,13 @@ async def check_live(websocket):
                                 await send_group_msg(
                                     websocket,
                                     group_id,
-                                    f"UID为【{UID}】的主播开播了\n"
+                                    f"UID为【{UID}】的主播【{user_name}】开播了\n"
                                     f"标题: {title}\n"
                                     f"观看人数: {online}\n"
                                     f"直播地址: {url}\n"
                                     f"[CQ:image,file={cover}]",
                                 )
                             elif liveStatus == 0:
-                                # 在直播状态为0时代表关播
                                 await send_group_msg(
                                     websocket, group_id, f"UID为【{UID}】的主播关播了"
                                 )
