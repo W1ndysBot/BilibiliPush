@@ -451,6 +451,116 @@ def save_live_status(group_id, UID, live_status):
         json.dump(subscriptions, f, ensure_ascii=False, indent=4)
 
 
+def save_user_name_mapping(UID, user_name):
+    """
+    保存UID和用户名的映射到本地文件
+    """
+    file_path = os.path.join(DATA_DIR, "uid_name_mapping.json")
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            uid_name_mapping = json.load(f)
+    else:
+        uid_name_mapping = {}
+
+    uid_name_mapping[UID] = user_name
+
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(uid_name_mapping, f, ensure_ascii=False, indent=4)
+
+
+def get_user_name(UID):
+    """
+    获取主播名字，优先从本地文件读取，如果没有则通过API获取
+    """
+    file_path = os.path.join(DATA_DIR, "uid_name_mapping.json")
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            uid_name_mapping = json.load(f)
+    else:
+        uid_name_mapping = {}
+
+    if UID in uid_name_mapping:
+        return uid_name_mapping[UID]
+
+    # 如果本地没有，使用API获取
+    user_info_url = (
+        f"https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/space?host_mid={UID}"
+    )
+    # 获取cookie
+    with open(os.path.join(DATA_DIR, "sessdata.txt"), "r", encoding="utf-8") as f:
+        sessdata = f.read().strip()
+    headers = {
+        "Cookie": f"SESSDATA={sessdata}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    }
+
+    try:
+        user_response = requests.get(user_info_url, headers=headers)
+        if user_response.status_code == 200:
+            user_data = user_response.json()
+
+            if "data" in user_data and "items" in user_data["data"]:
+                user_name = user_data["data"]["items"][0]["modules"]["module_author"][
+                    "name"
+                ]
+                # 使用新的函数保存映射
+                save_user_name_mapping(UID, user_name)
+                return user_name
+            else:
+                logging.error("API响应中缺少预期的'data'或'items'字段")
+        else:
+            logging.error(f"请求用户信息失败，状态码: {user_response.status_code}")
+    except Exception as e:
+        logging.error(f"获取用户信息时发生异常: {e}")
+
+    return "未知用户"
+
+
+# 修改 query_subscriptions 函数
+async def query_subscriptions(websocket, group_id, message_id):
+    """
+    查询已订阅的直播和动态
+    """
+    try:
+        # 查询直播订阅
+        live_subscriptions = load_live_subscription(group_id)
+        live_message = (
+            f"群【{group_id}】已订阅直播如下\n"
+            + "\n".join(
+                [f"{get_user_name(uid)} (UID: {uid})" for uid in live_subscriptions]
+            )
+            if live_subscriptions
+            else f"群【{group_id}】没有已订阅的直播"
+        )
+
+        # 查询动态订阅
+        dynamic_subscriptions = load_dynamic_subscription(group_id)
+        dynamic_message = (
+            f"群【{group_id}】已订阅动态如下\n"
+            + "\n".join(
+                [f"{get_user_name(uid)} (UID: {uid})" for uid in dynamic_subscriptions]
+            )
+            if dynamic_subscriptions
+            else f"群【{group_id}】没有已订阅的动态"
+        )
+
+        # 发送查询结果
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"[CQ:reply,id={message_id}]{live_message}\n\n{dynamic_message}",
+        )
+
+    except Exception as e:
+        logging.error(f"查询订阅失败: {e}")
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"[CQ:reply,id={message_id}]查询订阅失败，错误信息：{e}",
+        )
+
+
+# 修改 check_live 函数
 async def check_live(websocket):
     """
     定时检查直播有无变化
@@ -482,20 +592,12 @@ async def check_live(websocket):
                         PreviousStatus = get_previous_live_status(group_id, UID)
                         if liveStatus != PreviousStatus:
                             save_live_status(group_id, UID, liveStatus)
+                            user_name = data["data"]["items"][0]["modules"][
+                                "module_author"
+                            ]["name"]
+                            # 保存映射
+                            save_user_name_mapping(UID, user_name)
                             if liveStatus == 1:
-                                # 获取用户昵称
-                                user_info_url = f"https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/space?host_mid={UID}"
-                                user_response = requests.get(
-                                    user_info_url, headers=headers
-                                )
-                                if user_response.status_code == 200:
-                                    user_data = user_response.json()
-                                    user_name = user_data["data"]["items"][0][
-                                        "modules"
-                                    ]["module_author"]["name"]
-                                else:
-                                    user_name = "未知用户"
-
                                 # 在直播状态为1时代表开播
                                 title = data["data"]["title"]
                                 url = data["data"]["url"]
@@ -512,7 +614,9 @@ async def check_live(websocket):
                                 )
                             elif liveStatus == 0:
                                 await send_group_msg(
-                                    websocket, group_id, f"UID为【{UID}】的主播关播了"
+                                    websocket,
+                                    group_id,
+                                    f"UID为【{UID}】的主播【{user_name}】关播了",
                                 )
     except Exception as e:
         logging.error(f"定时检查直播有无变化失败: {e}")
@@ -663,40 +767,3 @@ async def check_dynamic(websocket):
                                 await send_group_msg(websocket, group_id, message)
     except Exception as e:
         logging.error(f"定时检查有无新动态失败: {e}")
-
-
-async def query_subscriptions(websocket, group_id, message_id):
-    """
-    查询已订阅的直播和动态
-    """
-    try:
-        # 查询直播订阅
-        live_subscriptions = load_live_subscription(group_id)
-        live_message = (
-            f"群【{group_id}】已订阅直播如下\n" + "\n".join(live_subscriptions)
-            if live_subscriptions
-            else f"群【{group_id}】没有已订阅的直播"
-        )
-
-        # 查询动态订阅
-        dynamic_subscriptions = load_dynamic_subscription(group_id)
-        dynamic_message = (
-            f"群【{group_id}】已订阅动态如下\n" + "\n".join(dynamic_subscriptions)
-            if dynamic_subscriptions
-            else f"群【{group_id}】没有已订阅的动态"
-        )
-
-        # 发送查询结果
-        await send_group_msg(
-            websocket,
-            group_id,
-            f"[CQ:reply,id={message_id}]{live_message}\n\n{dynamic_message}",
-        )
-
-    except Exception as e:
-        logging.error(f"查询订阅失败: {e}")
-        await send_group_msg(
-            websocket,
-            group_id,
-            f"[CQ:reply,id={message_id}]查询订阅失败，错误信息：{e}",
-        )
