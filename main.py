@@ -385,6 +385,7 @@ async def handle_BilibilliPush_group_message(websocket, msg):
         if raw_message == "bilipush":
             await toggle_function_status(websocket, group_id, message_id, authorized)
             return
+
         # 检查是否开启
         if load_function_status(group_id):
             await add_live_subscription(websocket, group_id, message_id, raw_message)
@@ -395,6 +396,10 @@ async def handle_BilibilliPush_group_message(websocket, msg):
             )
             await get_login_qr(websocket, group_id, message_id, raw_message)
             await scan_login(websocket, group_id, message_id, raw_message)
+            # 查询订阅
+            if raw_message == "查询订阅":
+                await query_subscriptions(websocket, group_id, message_id)
+                return
     except Exception as e:
         logging.error(f"处理BilibilliPush群消息失败: {e}")
         await send_group_msg(
@@ -658,3 +663,40 @@ async def check_dynamic(websocket):
                                 await send_group_msg(websocket, group_id, message)
     except Exception as e:
         logging.error(f"定时检查有无新动态失败: {e}")
+
+
+async def query_subscriptions(websocket, group_id, message_id):
+    """
+    查询已订阅的直播和动态
+    """
+    try:
+        # 查询直播订阅
+        live_subscriptions = load_live_subscription(group_id)
+        live_message = (
+            f"群【{group_id}】已订阅直播如下\n" + "\n".join(live_subscriptions)
+            if live_subscriptions
+            else f"群【{group_id}】没有已订阅的直播"
+        )
+
+        # 查询动态订阅
+        dynamic_subscriptions = load_dynamic_subscription(group_id)
+        dynamic_message = (
+            f"群【{group_id}】已订阅动态如下\n" + "\n".join(dynamic_subscriptions)
+            if dynamic_subscriptions
+            else f"群【{group_id}】没有已订阅的动态"
+        )
+
+        # 发送查询结果
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"[CQ:reply,id={message_id}]{live_message}\n\n{dynamic_message}",
+        )
+
+    except Exception as e:
+        logging.error(f"查询订阅失败: {e}")
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"[CQ:reply,id={message_id}]查询订阅失败，错误信息：{e}",
+        )
