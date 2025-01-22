@@ -592,9 +592,7 @@ async def check_live(websocket):
                         PreviousStatus = get_previous_live_status(group_id, UID)
                         if liveStatus != PreviousStatus:
                             save_live_status(group_id, UID, liveStatus)
-                            user_name = data["data"]["items"][0]["modules"][
-                                "module_author"
-                            ]["name"]
+                            user_name = get_user_name(UID)
                             # 保存映射
                             save_user_name_mapping(UID, user_name)
                             if liveStatus == 1:
