@@ -241,7 +241,9 @@ async def delete_dynamic_subscription(websocket, group_id, message_id, raw_messa
         subscriptions = load_dynamic_subscription(group_id)
         subscriptions.remove(bilibili_UID)
         with open(
-            os.path.join(DATA_DIR, f"{group_id}_dynamic.json"), "w", encoding="utf-8"
+            os.path.join(DATA_DIR, f"{group_id}_dynamic_subscription.json"),
+            "w",
+            encoding="utf-8",
         ) as f:
             json.dump(subscriptions, f, ensure_ascii=False, indent=4)
         await send_group_msg(
@@ -702,6 +704,7 @@ async def check_dynamic(websocket):
                             data["code"] == 0
                             and "data" in data
                             and "items" in data["data"]
+                            and data["data"]["items"]  # 确保 items 列表不为空
                         ):
                             latest_dynamic = data["data"]["items"][0]
                             dynamic_id = latest_dynamic["id_str"]
