@@ -1,4 +1,4 @@
-# script/BilibilliPush/main.py
+# script/BilibiliPush/main.py
 
 import logging
 import os
@@ -17,26 +17,26 @@ from app.api import *
 from app.switch import load_switch, save_switch
 
 
-# 数据存储路径，实际开发时，请将BilibilliPush替换为具体的数据存放路径
+# 数据存储路径，实际开发时，请将BilibiliPush替换为具体的数据存放路径
 DATA_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     "data",
-    "BilibilliPush",
+    "BilibiliPush",
 )
 
 
 # 查看功能开关状态
 def load_function_status(group_id):
-    return load_switch(group_id, "BilibilliPush")
+    return load_switch(group_id, "BilibiliPush")
 
 
 # 保存功能开关状态
 def save_function_status(group_id, status):
-    save_switch(group_id, "BilibilliPush", status)
+    save_switch(group_id, "BilibiliPush", status)
 
 
 # 处理元事件，用于启动时确保数据目录存在
-async def handle_BilibilliPush_meta_event(websocket, msg):
+async def handle_BilibiliPush_meta_event(websocket, msg):
     os.makedirs(DATA_DIR, exist_ok=True)
 
 
@@ -46,7 +46,7 @@ async def toggle_function_status(websocket, group_id, message_id, authorized):
         await send_group_msg(
             websocket,
             group_id,
-            f"[CQ:reply,id={message_id}]❌❌❌你没有权限对BilibilliPush功能进行操作,请联系管理员。",
+            f"[CQ:reply,id={message_id}]❌❌❌你没有权限对BilibiliPush功能进行操作,请联系管理员。",
         )
         return
 
@@ -55,14 +55,14 @@ async def toggle_function_status(websocket, group_id, message_id, authorized):
         await send_group_msg(
             websocket,
             group_id,
-            f"[CQ:reply,id={message_id}]🚫🚫🚫BilibilliPush功能已关闭",
+            f"[CQ:reply,id={message_id}]🚫🚫🚫BilibiliPush功能已关闭",
         )
     else:
         save_function_status(group_id, True)
         await send_group_msg(
             websocket,
             group_id,
-            f"[CQ:reply,id={message_id}]✅✅✅BilibilliPush功能已开启",
+            f"[CQ:reply,id={message_id}]✅✅✅BilibiliPush功能已开启",
         )
 
 
@@ -372,7 +372,7 @@ async def scan_login(websocket, group_id, message_id, raw_message):
 
 
 # 群消息处理函数
-async def handle_BilibilliPush_group_message(websocket, msg):
+async def handle_BilibiliPush_group_message(websocket, msg):
     # 确保数据目录存在
     os.makedirs(DATA_DIR, exist_ok=True)
     try:
@@ -403,11 +403,11 @@ async def handle_BilibilliPush_group_message(websocket, msg):
                 await query_subscriptions(websocket, group_id, message_id)
                 return
     except Exception as e:
-        logging.error(f"处理BilibilliPush群消息失败: {e}")
+        logging.error(f"处理BilibiliPush群消息失败: {e}")
         await send_group_msg(
             websocket,
             group_id,
-            f"[CQ:reply,id={message_id}]处理BilibilliPush群消息失败，错误信息："
+            f"[CQ:reply,id={message_id}]处理BilibiliPush群消息失败，错误信息："
             + str(e),
         )
         return
