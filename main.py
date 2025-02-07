@@ -723,43 +723,80 @@ async def check_dynamic(websocket):
 
                                 # 根据动态类型处理
                                 if dynamic_type == "DYNAMIC_TYPE_DRAW":
-                                    dynamic_text = latest_dynamic["modules"][
-                                        "module_dynamic"
-                                    ]["desc"]["text"]
+                                    # 图文动态
+                                    dynamic_text = latest_dynamic["modules"]["module_dynamic"]["desc"]["text"]
+                                    # 获取图片列表
+                                    images = latest_dynamic["modules"]["module_dynamic"]["major"]["draw"]["items"]
+                                    image_urls = [img["src"] for img in images]
+                                    
                                     message = (
-                                        f"UID:【{UID}】有新动态: \n"
+                                        f"UID:【{UID}】发布了新图文动态:\n"
                                         f"作者: {author_name}\n"
                                         f"发布时间: {pub_time}\n"
                                         f"动态内容: {dynamic_text}\n"
-                                        f"动态地址: {dynamic_url}"
+                                        f"动态地址: {dynamic_url}\n"
                                     )
+                                    # 添加图片
+                                    for img_url in image_urls:
+                                        message += f"[CQ:image,file={img_url}]\n"
+                                    
                                 elif dynamic_type == "DYNAMIC_TYPE_AV":
-                                    video_title = latest_dynamic["modules"][
-                                        "module_dynamic"
-                                    ]["major"]["archive"]["title"]
-                                    video_desc = latest_dynamic["modules"][
-                                        "module_dynamic"
-                                    ]["major"]["archive"]["desc"]
-                                    video_url = latest_dynamic["modules"][
-                                        "module_dynamic"
-                                    ]["major"]["archive"]["jump_url"]
-                                    video_cover = latest_dynamic["modules"][
-                                        "module_dynamic"
-                                    ]["major"]["archive"]["cover"]
+                                    # 视频动态
+                                    video_info = latest_dynamic["modules"]["module_dynamic"]["major"]["archive"]
+                                    video_title = video_info["title"]
+                                    video_desc = video_info.get("desc", "")
+                                    video_url = video_info["jump_url"]
+                                    video_cover = video_info["cover"]
+                                    
                                     message = (
-                                        f"UID:【{UID}】投稿了新视频: \n"
-                                        f"作者: {author_name}\n"
+                                        f"UID:【{UID}】投稿了新视频:\n"
+                                        f"作者: {author_name}\n" 
                                         f"发布时间: {pub_time}\n"
                                         f"视频标题: {video_title}\n"
                                         f"视频描述: {video_desc}\n"
                                         f"视频地址: {video_url}\n"
                                         f"[CQ:image,file={video_cover}]"
                                     )
-                                else:
+                                    
+                                elif dynamic_type == "DYNAMIC_TYPE_FORWARD":
+                                    # 转发动态
+                                    forward_text = latest_dynamic["modules"]["module_dynamic"]["desc"]["text"]
+                                    orig_type = latest_dynamic["orig"]["type"]
+                                    orig_author = latest_dynamic["orig"]["modules"]["module_author"]["name"]
+                                    
                                     message = (
-                                        f"UID:【{UID}】有新动态: \n"
+                                        f"UID:【{UID}】转发了动态:\n"
                                         f"作者: {author_name}\n"
                                         f"发布时间: {pub_time}\n"
+                                        f"转发内容: {forward_text}\n"
+                                        f"原动态作者: {orig_author}\n"
+                                        f"动态地址: {dynamic_url}"
+                                    )
+                                    
+                                    # 根据原动态类型添加额外信息
+                                    if "major" in latest_dynamic["orig"]["modules"]["module_dynamic"]:
+                                        orig_major = latest_dynamic["orig"]["modules"]["module_dynamic"]["major"]
+                                        if orig_major and orig_major["type"] == "MAJOR_TYPE_DRAW":
+                                            # 原动态为图文
+                                            orig_images = orig_major["draw"]["items"]
+                                            for img in orig_images:
+                                                message += f"\n[CQ:image,file={img['src']}]"
+                                        elif orig_major and orig_major["type"] == "MAJOR_TYPE_ARCHIVE":
+                                            # 原动态为视频
+                                            message += f"\n原视频封面: [CQ:image,file={orig_major['archive']['cover']}]"
+                                        
+                                else:
+                                    # 其他类型动态
+                                    if "desc" in latest_dynamic["modules"]["module_dynamic"]:
+                                        dynamic_text = latest_dynamic["modules"]["module_dynamic"]["desc"]["text"]
+                                    else:
+                                        dynamic_text = "未能解析动态内容"
+                                        
+                                    message = (
+                                        f"UID:【{UID}】发布了新动态:\n"
+                                        f"作者: {author_name}\n"
+                                        f"发布时间: {pub_time}\n"
+                                        f"动态内容: {dynamic_text}\n"
                                         f"动态类型: {dynamic_type}\n"
                                         f"动态地址: {dynamic_url}"
                                     )
