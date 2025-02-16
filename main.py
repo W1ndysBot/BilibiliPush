@@ -724,11 +724,15 @@ async def check_dynamic(websocket):
                                 # 根据动态类型处理
                                 if dynamic_type == "DYNAMIC_TYPE_DRAW":
                                     # 图文动态
-                                    dynamic_text = latest_dynamic["modules"]["module_dynamic"]["desc"]["text"]
+                                    dynamic_text = latest_dynamic["modules"][
+                                        "module_dynamic"
+                                    ]["desc"]["text"]
                                     # 获取图片列表
-                                    images = latest_dynamic["modules"]["module_dynamic"]["major"]["draw"]["items"]
+                                    images = latest_dynamic["modules"][
+                                        "module_dynamic"
+                                    ]["major"]["draw"]["items"]
                                     image_urls = [img["src"] for img in images]
-                                    
+
                                     message = (
                                         f"UID:【{UID}】发布了新图文动态:\n"
                                         f"作者: {author_name}\n"
@@ -739,31 +743,37 @@ async def check_dynamic(websocket):
                                     # 添加图片
                                     for img_url in image_urls:
                                         message += f"[CQ:image,file={img_url}]\n"
-                                    
+
                                 elif dynamic_type == "DYNAMIC_TYPE_AV":
                                     # 视频动态
-                                    video_info = latest_dynamic["modules"]["module_dynamic"]["major"]["archive"]
+                                    video_info = latest_dynamic["modules"][
+                                        "module_dynamic"
+                                    ]["major"]["archive"]
                                     video_title = video_info["title"]
                                     video_desc = video_info.get("desc", "")
                                     video_url = video_info["jump_url"]
                                     video_cover = video_info["cover"]
-                                    
+
                                     message = (
                                         f"UID:【{UID}】投稿了新视频:\n"
-                                        f"作者: {author_name}\n" 
+                                        f"作者: {author_name}\n"
                                         f"发布时间: {pub_time}\n"
                                         f"视频标题: {video_title}\n"
                                         f"视频描述: {video_desc}\n"
                                         f"视频地址: {video_url}\n"
                                         f"[CQ:image,file={video_cover}]"
                                     )
-                                    
+
                                 elif dynamic_type == "DYNAMIC_TYPE_FORWARD":
                                     # 转发动态
-                                    forward_text = latest_dynamic["modules"]["module_dynamic"]["desc"]["text"]
+                                    forward_text = latest_dynamic["modules"][
+                                        "module_dynamic"
+                                    ]["desc"]["text"]
                                     orig_type = latest_dynamic["orig"]["type"]
-                                    orig_author = latest_dynamic["orig"]["modules"]["module_author"]["name"]
-                                    
+                                    orig_author = latest_dynamic["orig"]["modules"][
+                                        "module_author"
+                                    ]["name"]
+
                                     message = (
                                         f"UID:【{UID}】转发了动态:\n"
                                         f"作者: {author_name}\n"
@@ -772,26 +782,47 @@ async def check_dynamic(websocket):
                                         f"原动态作者: {orig_author}\n"
                                         f"动态地址: {dynamic_url}"
                                     )
-                                    
+
                                     # 根据原动态类型添加额外信息
-                                    if "major" in latest_dynamic["orig"]["modules"]["module_dynamic"]:
-                                        orig_major = latest_dynamic["orig"]["modules"]["module_dynamic"]["major"]
-                                        if orig_major and orig_major["type"] == "MAJOR_TYPE_DRAW":
+                                    if (
+                                        "major"
+                                        in latest_dynamic["orig"]["modules"][
+                                            "module_dynamic"
+                                        ]
+                                    ):
+                                        orig_major = latest_dynamic["orig"]["modules"][
+                                            "module_dynamic"
+                                        ]["major"]
+                                        if (
+                                            orig_major
+                                            and orig_major["type"] == "MAJOR_TYPE_DRAW"
+                                        ):
                                             # 原动态为图文
                                             orig_images = orig_major["draw"]["items"]
                                             for img in orig_images:
-                                                message += f"\n[CQ:image,file={img['src']}]"
-                                        elif orig_major and orig_major["type"] == "MAJOR_TYPE_ARCHIVE":
+                                                message += (
+                                                    f"\n[CQ:image,file={img['src']}]"
+                                                )
+                                        elif (
+                                            orig_major
+                                            and orig_major["type"]
+                                            == "MAJOR_TYPE_ARCHIVE"
+                                        ):
                                             # 原动态为视频
                                             message += f"\n原视频封面: [CQ:image,file={orig_major['archive']['cover']}]"
-                                        
+
                                 else:
                                     # 其他类型动态
-                                    if "desc" in latest_dynamic["modules"]["module_dynamic"]:
-                                        dynamic_text = latest_dynamic["modules"]["module_dynamic"]["desc"]["text"]
+                                    if (
+                                        "desc"
+                                        in latest_dynamic["modules"]["module_dynamic"]
+                                    ):
+                                        dynamic_text = latest_dynamic["modules"][
+                                            "module_dynamic"
+                                        ]["desc"]["text"]
                                     else:
                                         dynamic_text = "未能解析动态内容"
-                                        
+
                                     message = (
                                         f"UID:【{UID}】发布了新动态:\n"
                                         f"作者: {author_name}\n"
@@ -805,3 +836,57 @@ async def check_dynamic(websocket):
                                 await send_group_msg(websocket, group_id, message)
     except Exception as e:
         logging.error(f"定时检查有无新动态失败: {e}")
+
+
+# 统一事件处理入口
+async def handle_events(websocket, msg):
+    """统一事件处理入口"""
+    try:
+        # 处理回调事件
+        if msg.get("status") == "ok":
+            return
+
+        post_type = msg.get("post_type")
+
+        # 处理元事件
+        if post_type == "meta_event":
+            await handle_BilibiliPush_meta_event(websocket)
+
+        # 处理消息事件
+        elif post_type == "message":
+            message_type = msg.get("message_type")
+            if message_type == "group":
+                await handle_BilibiliPush_group_message(websocket, msg)
+            elif message_type == "private":
+                return
+
+        # 处理通知事件
+        elif post_type == "notice":
+            if msg.get("notice_type") == "group":
+                return
+
+    except Exception as e:
+        error_type = {
+            "message": "消息",
+            "notice": "通知",
+            "request": "请求",
+            "meta_event": "元事件",
+        }.get(post_type, "未知")
+
+        logging.error(f"处理BilibiliPush{error_type}事件失败: {e}")
+
+        # 发送错误提示
+        if post_type == "message":
+            message_type = msg.get("message_type")
+            if message_type == "group":
+                await send_group_msg(
+                    websocket,
+                    msg.get("group_id"),
+                    f"处理BilibiliPush{error_type}事件失败，错误信息：{str(e)}",
+                )
+            elif message_type == "private":
+                await send_private_msg(
+                    websocket,
+                    msg.get("user_id"),
+                    f"处理BilibiliPush{error_type}事件失败，错误信息：{str(e)}",
+                )
