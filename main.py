@@ -852,6 +852,7 @@ async def handle_events(websocket, msg):
         # 处理元事件
         if post_type == "meta_event":
             await handle_BilibiliPush_meta_event(websocket)
+            await check_live_and_dynamic(websocket)
 
         # 处理消息事件
         elif post_type == "message":
